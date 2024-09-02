@@ -10,6 +10,7 @@
 
 #include "delay.h"
 
+#if BITBANG_V1
 static inline void i2c_set_scl(struct i2c_bitbang *self, uint8_t state)
 {
     self->ops->set_scl(self->io_ctx, state);
@@ -29,6 +30,27 @@ static inline uint8_t i2c_get_sda(struct i2c_bitbang *self)
 {
     return self->ops->get_sda(self->io_ctx);
 }
+#elif BITBANG_V2
+static inline void i2c_set_scl(struct i2c_bitbang *self, uint8_t state)
+{
+    self->set_scl(self->io_ctx, state);
+}
+
+static inline void i2c_set_sda(struct i2c_bitbang *self, uint8_t state)
+{
+    self->set_sda(self->io_ctx, state);
+}
+
+static inline uint8_t i2c_get_scl(struct i2c_bitbang *self)
+{
+    return self->get_scl(self->io_ctx);
+}
+
+static inline uint8_t i2c_get_sda(struct i2c_bitbang *self)
+{
+    return self->get_sda(self->io_ctx);
+}
+#endif /* BITBANG_V1 */
 
 static inline void i2c_delay(uint16_t nus)
 {
@@ -155,7 +177,7 @@ static void i2c_write_bit(struct i2c_bitbang *self, uint8_t bit)
  */
 static uint8_t i2c_write_byte(struct i2c_bitbang *self, uint8_t byte)
 {
-    /* MSB format format */
+    /* MSB format */
     uint8_t i;
     for (i = 0; i < 8; ++i) {
         /* assert: scl=0 */
@@ -254,47 +276,61 @@ __end:
 
 int i2c_bitbang_recover_bus(struct i2c_bitbang *self)
 {
-	int i;
+    int i;
 
-	/*
-	 * The I2C-bus specification and user manual (NXP UM10204
-	 * rev. 6, section 3.1.16) suggests the master emit 9 SCL
-	 * clock pulses to recover the bus.
-	 *
-	 * The Linux kernel I2C bitbang recovery functionality issues
-	 * a START condition followed by 9 STOP conditions.
-	 *
-	 * Other I2C slave devices (e.g. Microchip ATSHA204a) suggest
-	 * issuing a START condition followed by 9 SCL clock pulses
-	 * with SDA held high/floating, a REPEATED START condition,
-	 * and a STOP condition.
-	 *
-	 * The latter is what is implemented here.
-	 */
+    /*
+     * The I2C-bus specification and user manual (NXP UM10204
+     * rev. 6, section 3.1.16) suggests the master emit 9 SCL
+     * clock pulses to recover the bus.
+     *
+     * The Linux kernel I2C bitbang recovery functionality issues
+     * a START condition followed by 9 STOP conditions.
+     *
+     * Other I2C slave devices (e.g. Microchip ATSHA204a) suggest
+     * issuing a START condition followed by 9 SCL clock pulses
+     * with SDA held high/floating, a REPEATED START condition,
+     * and a STOP condition.
+     *
+     * The latter is what is implemented here.
+     */
 
-	/* Start condition */
-	i2c_start(self);
+    /* Start condition */
+    i2c_start(self);
 
-	/* 9 cycles of SCL with SDA held high */
-	for (i = 0; i < 9; i++) {
-		i2c_write_bit(self, 1);
-	}
+    /* 9 cycles of SCL with SDA held high */
+    for (i = 0; i < 9; i++) {
+        i2c_write_bit(self, 1);
+    }
 
-	/* Another start condition followed by a stop condition */
-	i2c_repeat_start(self);
-	i2c_stop(self);
+    /* Another start condition followed by a stop condition */
+    i2c_repeat_start(self);
+    i2c_stop(self);
 
-	/* Check if bus is clear */
-	if (i2c_get_sda(self)) {
-		return 0;
-	} else {
-		return -1;
-	}
+    /* Check if bus is clear */
+    if (i2c_get_sda(self)) {
+        return 0;
+    } else {
+        return -1;
+    }
 }
 
+#if BITBANG_V1
 void i2c_bitbang_init(struct i2c_bitbang *bitbang, 
                 const struct i2c_bitbang_ops *ops, void *io_context)
 {
     bitbang->ops = ops;
     bitbang->io_ctx = io_context;
 }
+#elif BITBANG_V2
+int i2c_bitbang_init(struct i2c_bitbang *bitbang, void *io_context)
+{
+    if (!bitbang)
+        return -1;
+    if (!io_context)
+        return -1;
+    
+    bitbang->io_ctx = io_context;
+    return 0;
+}
+#endif /* BITBANG_V1 */
+

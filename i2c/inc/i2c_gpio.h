@@ -11,10 +11,12 @@ struct i2c_gpio_context {
     uint16_t sda_gpio_pin;
 };
 
+#if BITBANG_V1
 int i2c_gpio_transfer(struct i2c_gpio_context *gpio_ctx, struct i2c_msg *msgs,
 				uint8_t num_msgs, uint16_t slave_address);
 
 int i2c_gpio_recover_bus(struct i2c_gpio_context *gpio_ctx);
+#endif /* BITBANG_V1 */
 
 int i2c_gpio_init(struct i2c_gpio_context *gpio_ctx);
 
