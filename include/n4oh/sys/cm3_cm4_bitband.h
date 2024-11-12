@@ -32,7 +32,6 @@
  * "bit-band" @p addr byte's @p bitnum to "bit-band alias" filed byte
  */
 #define CM_BITBAND(addr, bitnum) \
-    (CM_ALIAS_ADDR(addr) + CM_ALIAS_OFFSET(addr) + \
-     CM_ALIAS_BIT_OFFSET(bitnum))
+    (CM_ALIAS_ADDR(addr) + CM_ALIAS_OFFSET(addr) + CM_ALIAS_BIT_OFFSET(bitnum))
 
 #endif /* _SYS_CM3_CM4_BITBAND_H_ */
